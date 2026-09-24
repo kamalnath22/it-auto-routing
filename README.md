@@ -288,6 +288,150 @@ For interview demonstration, the application seeds 3 default accounts upon start
 | **AGENT** | `agent@example.com` | `Agent123` | View all tickets in system |
 | **ADMIN** | `admin@example.com` | `Admin123` | View all tickets, full administrative visibility |
 
+## Phase 3: Ticket Workflow
+
+Phase 3 keeps the Phase 2 JWT authentication and adds a role-aware ticket workflow.
+
+Ticket lifecycle:
+
+```text
+OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED
+```
+
+Statuses are stored as enum strings. The backend rejects skipped, reversed, or repeated transitions. Employees may close their own resolved tickets, assigned agents may move tickets through in-progress and resolved, and administrators can manage the full workflow.
+
+Role visibility and actions:
+
+- `EMPLOYEE`: creates tickets and sees only tickets they created; may close a resolved ticket.
+- `AGENT`: sees only tickets assigned to them; may move assigned tickets to `IN_PROGRESS` or `RESOLVED`.
+- `ADMIN`: sees all tickets, changes valid statuses, and assigns or unassigns agents.
+
+Phase 3 ticket APIs:
+
+```text
+POST  /api/tickets
+GET   /api/tickets?keyword=vpn&status=OPEN
+GET   /api/tickets/{id}
+PATCH /api/tickets/{id}/status       { "status": "IN_PROGRESS" }
+PATCH /api/tickets/{id}/assign       { "agentId": 2 }
+PATCH /api/tickets/{id}/unassign
+```
+
+Ticket responses include the owner, assigned agent, `createdAt`, and `updatedAt`. Search and status filters are applied inside role-scoped repository queries. The vanilla frontend now adds status counts, debounced search, status filtering, assignment/status controls, and updated ticket details while retaining the existing Phase 2 authentication flow.
+
+## Phase 4: ML Classification
+
+Phase 4 adds a small inference service:
+
+```text
+Browser -> Spring Boot -> FastAPI -> TF-IDF + calibrated Linear SVM
+                                  -> category + confidence
+                         -> AUTO_CLASSIFIED or MANUAL_REVIEW
+```
+
+The production model is the calibrated `TF-IDF + LinearSVC` approach selected from the existing experiments. It uses 47,837 tickets across eight categories. The calibrated benchmark was 86.49% overall accuracy, 86.62% macro F1, and 86.49% weighted F1. SBERT-based alternatives were not selected because they performed worse on this dataset.
+
+The initial operating threshold is `0.80`. At that threshold, validation showed 63.91% of predictions accepted automatically and 97.38% accuracy among those accepted predictions. The 97.38% figure is conditional validation accuracy, not overall model accuracy; overall test-set accuracy is 86.49%.
+
+Training is offline. FastAPI loads the saved `ticket_classifier_calibrated.joblib` artifact once at startup and performs inference only. The repository intentionally does not include the 47,837-row dataset or a local model artifact. Provide the artifact through `MODEL_PATH` when running the service.
+
+### FastAPI service
+
+```bash
+cd ml_service
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+MODEL_PATH=../model/ticket_classifier_calibrated.joblib \
+ML_CONFIDENCE_THRESHOLD=0.80 \
+.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+The service exposes `GET /health` and `POST /predict` with `{ "text": "..." }`. If the artifact is missing, health and prediction return `503` with a safe error message.
+
+### Spring Boot integration
+
+Spring Boot sends `subject + description` to `ML_SERVICE_URL` with a short timeout. Ticket creation succeeds even when FastAPI is unavailable: the ticket is retained with `MANUAL_REVIEW`. Confidence at or above `ML_CONFIDENCE_THRESHOLD` stores `category` and `AUTO_CLASSIFIED`; lower confidence stores `predictedCategory` and `mlConfidence` while leaving final `category` unset.
+
+Relevant configuration:
+
+```text
+ML_SERVICE_URL=http://localhost:8000
+ML_CONFIDENCE_THRESHOLD=0.80
+ML_CONNECT_TIMEOUT_MS=1000
+ML_READ_TIMEOUT_MS=3000
+```
+
+Agents and administrators can use `GET /api/tickets/review-queue` and `PATCH /api/tickets/{id}/classification` with `{ "category": "Access" }`. Manual classification changes the status to `MANUALLY_CLASSIFIED` while retaining the original ML recommendation and confidence. Employees cannot access either review operation.
+
+## Phase 5: Automatic Team Routing
+
+Team assignment is deterministic backend business logic, separate from ML category prediction:
+
+| Category | Team |
+|---|---|
+| Hardware | Hardware Support |
+| Access | IT Access |
+| HR Support | HR Helpdesk |
+| Purchase | Procurement |
+| Storage | Storage/Infrastructure |
+| Internal Project | Internal Projects |
+| Administrative rights | Administrative Support |
+| Miscellaneous | General Support |
+
+`AUTO_CLASSIFIED` tickets are routed immediately. `MANUAL_REVIEW` tickets retain `predictedCategory` and `mlConfidence` but have no final team until an agent or administrator classifies them. Manual classification then runs the same routing service. Existing human `assignedAgent` behavior remains independent from `assignedTeam`.
+
+Team APIs:
+
+```text
+GET /api/teams
+GET /api/teams/{id}
+```
+
+## Phase 6: Priority and SLA Management
+
+Priority is deterministic and explainable; it is not ML-based. Critical keywords such as complete service outage, security incident, production-wide failure, and emergency produce `CRITICAL`. Major availability/access impact produces `HIGH`, informational/minor/non-urgent wording produces `LOW`, and other tickets default to `MEDIUM`.
+
+The seeded demo SLA rules are calendar-time targets and are configurable database records, not industry-standard claims:
+
+| Priority | Target |
+|---|---:|
+| CRITICAL | 120 minutes |
+| HIGH | 240 minutes |
+| MEDIUM | 480 minutes |
+| LOW | 1440 minutes |
+
+The ticket stores its UTC `Instant` deadline and current SLA status. `AT_RISK` begins when 20% or less of the original target remains. An unresolved ticket past its deadline is `BREACHED`; resolved or closed tickets become `RESOLVED`. A Spring scheduled service checks unresolved tickets every minute by default and writes only changed statuses. Business hours, holidays, weekends, notifications, and escalation automation are intentionally out of scope.
+
+Ticket responses now expose `assignedTeam`, `priority`, `slaDeadline`, `slaStatus`, and `slaTargetMinutes`. The frontend displays these alongside category/classification data and dashboard counts for manual review, at-risk, and breached tickets.
+
+## Complete API Flow
+
+```text
+POST /api/tickets
+  -> PENDING
+  -> FastAPI category/confidence
+  -> AUTO_CLASSIFIED or MANUAL_REVIEW
+  -> category-to-team routing when final category exists
+  -> deterministic priority
+  -> active SLA rule and UTC deadline
+  -> scheduled SLA monitoring
+```
+
+Relevant configuration:
+
+```text
+DB_URL=jdbc:postgresql://localhost:5432/it_ticket_platform
+DB_USERNAME=<database user>
+DB_PASSWORD=<database password>
+JWT_SECRET=<secret>
+ML_SERVICE_URL=http://localhost:8000
+ML_CONFIDENCE_THRESHOLD=0.80
+MODEL_PATH=./model/ticket_classifier_calibrated.joblib
+SLA_MONITOR_DELAY_MS=60000
+```
+
+The Spring Boot service can be started with `mvn spring-boot:run` from `backend`. The frontend remains the existing vanilla app and can be served with `python3 -m http.server 5500` from `frontend`. Run Java tests with `mvn test`; run FastAPI tests with `cd ml_service && .venv/bin/python -m pytest -q` after installing `requirements.txt`. Full end-to-end ML prediction requires providing the real trained `.joblib` artifact through `MODEL_PATH`; this repository does not commit the dataset or artifact.
+
 ---
 
 ## API Examples (cURL)

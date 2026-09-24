@@ -344,6 +344,46 @@ tbody tr:last-child td {
     color: #1e40af;
 }
 
+.status-badge.status-IN_PROGRESS { background: #fef3c7; color: #92400e; }
+.status-badge.status-RESOLVED { background: #dcfce7; color: #166534; }
+.status-badge.status-CLOSED { background: #e2e8f0; color: #475569; }
+
+.ticket-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 0 0 16px;
+}
+
+.ticket-stat {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid #d8e0e7;
+    border-radius: 6px;
+    background: #f8fafc;
+}
+
+.ticket-stat strong { font-size: 1.35rem; color: #102a43; }
+.ticket-stat span { color: #627d98; font-size: .78rem; font-weight: 700; }
+
+.ticket-filters {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.ticket-filters label, .assign-controls label { display: grid; gap: 5px; }
+.ticket-filters .filter-search { flex: 1; }
+.ticket-filters input, .ticket-filters select, .assign-controls input { min-height: 40px; }
+.ticket-filters select { background: #fff; }
+.assign-controls { display: flex; align-items: end; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #d8e0e7; }
+.assign-controls input { width: 150px; }
+.detail-actions { margin-top: 16px; }
+
 .ticket-detail {
     margin-top: 18px;
     border: 1px solid #d8e0e7;
@@ -360,6 +400,28 @@ tbody tr:last-child td {
 .ticket-detail p {
     margin: 8px 0 0;
     line-height: 1.5;
+}
+
+.review-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #d8e0e7;
+}
+
+.review-section .section-header {
+    align-items: flex-start;
+}
+
+.review-section h2 {
+    margin-bottom: 4px;
+}
+
+.review-section select {
+    min-width: 150px;
+    border: 1px solid #bcccdc;
+    border-radius: 6px;
+    padding: 8px;
+    font: inherit;
 }
 
 @media (max-width: 640px) {
@@ -385,4 +447,9 @@ tbody tr:last-child td {
         align-items: flex-start;
         flex-direction: column;
     }
+
+    .ticket-stats { grid-template-columns: repeat(2, 1fr); }
+    .ticket-filters { align-items: stretch; flex-direction: column; }
+    .assign-controls { align-items: stretch; flex-direction: column; }
+    .assign-controls input { width: 100%; }
 }

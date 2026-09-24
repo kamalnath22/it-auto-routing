@@ -34,3 +34,12 @@ build/
 ### OS ###
 .DS_Store
 Thumbs.db
+
+# Phase 4 local ML artifacts and Python environments
+ml_service/.venv/
+ml_service/__pycache__/
+ml_service/.pytest_cache/
+*.pyc
+model/*.joblib
+model/*.pkl
+*.csv

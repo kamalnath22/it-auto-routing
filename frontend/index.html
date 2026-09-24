@@ -12,7 +12,7 @@
             <header class="main-header">
                 <div>
                     <h1>IT Ticket Management Platform</h1>
-                    <p class="subtitle">Phase 2: Authentication, JWT &amp; Role-Based Access Control</p>
+                    <p class="subtitle">Phase 3: Ticket workflow &amp; role-based operations</p>
                 </div>
                 <div id="user-bar" class="user-bar" hidden>
                     <div class="user-info">
@@ -95,6 +95,22 @@
                         <button id="refresh-button" type="button" class="secondary">Refresh</button>
                     </div>
 
+                    <div id="ticket-stats" class="ticket-stats" aria-label="Ticket status counts"></div>
+                    <div class="ticket-filters">
+                        <label class="filter-search" for="ticket-search">Search tickets
+                            <input id="ticket-search" type="search" placeholder="Search subject or description..." autocomplete="off">
+                        </label>
+                        <label for="status-filter">Status
+                            <select id="status-filter">
+                                <option value="">All statuses</option>
+                                <option value="OPEN">Open</option>
+                                <option value="IN_PROGRESS">In progress</option>
+                                <option value="RESOLVED">Resolved</option>
+                                <option value="CLOSED">Closed</option>
+                            </select>
+                        </label>
+                    </div>
+
                     <div class="table-wrap">
                         <table>
                             <thead>
@@ -103,6 +119,9 @@
                                     <th>Subject</th>
                                     <th>Status</th>
                                     <th>Owner</th>
+                                    <th>Assigned Agent</th>
+                                    <th>Category</th>
+                                    <th>Classification</th>
                                     <th>Created At</th>
                                 </tr>
                             </thead>
@@ -111,6 +130,19 @@
                     </div>
 
                     <article id="ticket-detail" class="ticket-detail" hidden></article>
+                </section>
+
+                <section id="review-section" class="review-section" hidden>
+                    <div class="section-header">
+                        <div><h2>Manual review queue</h2><p class="form-hint">Low-confidence predictions waiting for an agent or admin.</p></div>
+                        <button id="review-refresh-button" type="button" class="secondary">Refresh queue</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>ID</th><th>Subject</th><th>Predicted category</th><th>Confidence</th><th>Final category</th><th></th></tr></thead>
+                            <tbody id="review-body"></tbody>
+                        </table>
+                    </div>
                 </section>
             </section>
         </section>
