@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Ticket Platform — Auto-Routing &amp; SLA Management</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="page">
+        <section class="panel">
+            <header class="main-header">
+                <div>
+                    <h1>IT Ticket Management Platform</h1>
+                    <p class="subtitle">Phase 2: Authentication, JWT &amp; Role-Based Access Control</p>
+                </div>
+                <div id="user-bar" class="user-bar" hidden>
+                    <div class="user-info">
+                        <span class="user-greeting">Welcome, <strong id="user-name"></strong></span>
+                        <span id="user-role" class="role-badge"></span>
+                    </div>
+                    <button id="logout-button" type="button" class="secondary small">Logout</button>
+                </div>
+            </header>
+
+            <!-- Authentication Section (Shown when unauthenticated) -->
+            <section id="auth-section" class="auth-section">
+                <div class="auth-tabs">
+                    <button id="tab-login" type="button" class="tab-btn active">Sign In</button>
+                    <button id="tab-register" type="button" class="tab-btn">Register</button>
+                </div>
+
+                <div class="auth-content">
+                    <!-- Login Form -->
+                    <form id="login-form" class="auth-form">
+                        <h2>Login to Your Account</h2>
+
+                        <label for="login-email">Email Address</label>
+                        <input id="login-email" type="email" placeholder="name@example.com" required autocomplete="email">
+
+                        <label for="login-password">Password</label>
+                        <input id="login-password" type="password" placeholder="••••••••" required autocomplete="current-password">
+
+                        <button type="submit" id="login-submit-btn">Login</button>
+                    </form>
+
+                    <!-- Register Form -->
+                    <form id="register-form" class="auth-form" hidden>
+                        <h2>Register as Employee</h2>
+                        <p class="form-hint">Public registrations are assigned the <strong>EMPLOYEE</strong> role.</p>
+
+                        <label for="register-name">Full Name</label>
+                        <input id="register-name" type="text" placeholder="Kamal Nath" maxlength="100" required autocomplete="name">
+
+                        <label for="register-email">Email Address</label>
+                        <input id="register-email" type="email" placeholder="kamal@example.com" maxlength="150" required autocomplete="email">
+
+                        <label for="register-password">Password</label>
+                        <input id="register-password" type="password" placeholder="Min. 6 characters" minlength="6" maxlength="100" required autocomplete="new-password">
+
+                        <button type="submit" id="register-submit-btn">Register &amp; Sign In</button>
+                    </form>
+
+                    <p id="auth-message" class="message" role="status" aria-live="polite"></p>
+
+                    <div class="demo-accounts">
+                        <p><strong>Demo Accounts:</strong></p>
+                        <ul>
+                            <li><button type="button" class="link-btn" onclick="fillLogin('employee@example.com','Employee123')">Employee</button>: <code>employee@example.com</code> / <code>Employee123</code></li>
+                            <li><button type="button" class="link-btn" onclick="fillLogin('agent@example.com','Agent123')">Agent</button>: <code>agent@example.com</code> / <code>Agent123</code></li>
+                            <li><button type="button" class="link-btn" onclick="fillLogin('admin@example.com','Admin123')">Admin</button>: <code>admin@example.com</code> / <code>Admin123</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Authenticated Workspace Section (Shown when authenticated) -->
+            <section id="app-section" class="app-section" hidden>
+                <form id="ticket-form" class="ticket-form">
+                    <h2>Create New Ticket</h2>
+
+                    <label for="subject">Subject</label>
+                    <input id="subject" name="subject" maxlength="200" placeholder="Brief summary of the issue" required>
+
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="4" maxlength="5000" placeholder="Provide full details about the issue..." required></textarea>
+
+                    <button type="submit" id="ticket-submit-btn">Create Ticket</button>
+                    <p id="message" class="message" role="status" aria-live="polite"></p>
+                </form>
+
+                <section class="tickets-section">
+                    <div class="section-header">
+                        <h2 id="tickets-title">My Tickets</h2>
+                        <button id="refresh-button" type="button" class="secondary">Refresh</button>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Owner</th>
+                                    <th>Created At</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tickets-body"></tbody>
+                        </table>
+                    </div>
+
+                    <article id="ticket-detail" class="ticket-detail" hidden></article>
+                </section>
+            </section>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
